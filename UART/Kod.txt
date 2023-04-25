@@ -1,0 +1,227 @@
+---------------ZAD 1 TABLICA 2D SEKWENCJE-------------------------------------
+#include "stm32l1xx.h"
+
+GPIO_InitTypeDef gpio;
+
+// tablica 2D z sekwencją zapalania diod
+const char led_pattern[][9] = {
+    {'X','O','O','O','O','O','O','O','X'},
+    {'O','X','O','O','O','O','O','X','O'},
+    {'O','O','X','O','O','O','X','O','O'},
+    {'O','O','O','X','O','X','O','O','O'},
+    {'O','O','O','O','X','O','O','O','O'},
+    {'O','O','O','X','O','X','O','O','O'},
+    {'O','O','X','O','O','O','X','O','O'},
+    {'O','X','O','O','O','O','O','X','O'},
+    {'X','O','O','O','O','O','O','O','X'}
+};
+
+int main(void)
+{
+    HAL_Init();
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+
+    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8;
+    gpio.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio.Pull = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &gpio);
+
+    while (1)
+    {
+        // iteracja po wszystkich stanach diod w sekwencji
+        for (int i = 0; i < sizeof(led_pattern) / sizeof(led_pattern[0]); i++)
+        {
+            // iteracja po wszystkich diodach w danym stanie
+            for (int j = 0; j < 9; j++)
+            {
+                // przesunięcie bitowe w prawo, jeśli znak to 'X'
+                if (led_pattern[i][j] == 'X')
+                {
+                    HAL_GPIO_WritePin(GPIOC, 1 << j, GPIO_PIN_SET);
+                }
+                else
+                {
+                    HAL_GPIO_WritePin(GPIOC, 1 << j, GPIO_PIN_RESET);
+                }
+            }
+            HAL_Delay(100);
+        }
+    }
+}
+
+---------------ZAD 2 STAN LICZNIKA JEST NA DIODACH-------------------------------------
+
+#include "stm32l1xx.h"
+
+GPIO_InitTypeDef gpio;
+
+// stan licznika
+uint16_t counter = 0;
+
+int main(void)
+{
+    HAL_Init();
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8;
+    gpio.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio.Pull = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &gpio);
+
+    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    gpio.Mode = GPIO_MODE_INPUT;
+    gpio.Pull = GPIO_PULLUP;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &gpio);
+
+    while (1)
+    {
+        // obsługa przycisku SW1 (zwiększenie licznika)
+        if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET)
+        {
+            counter++;
+            HAL_Delay(100);
+        }
+
+        // obsługa przycisku SW2 (zmniejszenie licznika)
+        if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1) == GPIO_PIN_RESET)
+        {
+            if (counter > 0)
+            {
+                counter--;
+            }
+            HAL_Delay(100);
+        }
+
+        // wyświetlanie wartości licznika na diodach
+        for (int i = 0; i < 9; i++)
+        {
+            if (counter & (1 << i))
+            {
+                HAL_GPIO_WritePin(GPIOC, 1 << i, GPIO_PIN_SET);
+            }
+            else
+            {
+                HAL_GPIO_WritePin(GPIOC, 1 << i, GPIO_PIN_RESET);
+            }
+        }
+    }
+}
+-----------------------------ZAD 3---------------------------------
+#include "stm32l1xx.h"
+#include <string.h>
+#include <stdlib.h>
+
+UART_HandleTypeDef uart;
+
+void send_string(char* s)
+{
+	HAL_UART_Transmit(&uart, (uint8_t*)s, strlen(s), 1000);
+}
+
+GPIO_InitTypeDef gpio;
+
+// stan licznika
+uint16_t counter = 0;
+
+int main(void)
+{
+    HAL_Init();
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_USART2_CLK_ENABLE();
+
+    GPIO_InitTypeDef gpio;
+    gpio.Mode = GPIO_MODE_AF_PP;
+    gpio.Pin = GPIO_PIN_2|GPIO_PIN_3;
+    gpio.Alternate = GPIO_AF7_USART2;
+    gpio.Pull = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &gpio);
+
+    uart.Instance = USART2;
+    uart.Init.BaudRate = 115200;
+    uart.Init.WordLength = UART_WORDLENGTH_8B;
+    uart.Init.Parity = UART_PARITY_NONE;
+    uart.Init.StopBits = UART_STOPBITS_1;
+    uart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    uart.Init.OverSampling = UART_OVERSAMPLING_16;
+    uart.Init.Mode = UART_MODE_TX_RX;
+    HAL_UART_Init(&uart);
+
+    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8;
+    gpio.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio.Pull = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &gpio);
+
+    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    gpio.Mode = GPIO_MODE_INPUT;
+    gpio.Pull = GPIO_PULLUP;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOB, &gpio);
+
+    while (1)
+    {
+        // obsługa przycisku SW1 (zwiększenie licznika)
+        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == GPIO_PIN_RESET)
+        {
+            counter++;
+            HAL_Delay(100);
+        }
+
+        // obsługa przycisku SW2 (zmniejszenie licznika i wyswietlenie jego aktualnej wartosci)
+        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1) == GPIO_PIN_RESET)
+        {
+            if (counter > 0)
+            {
+                counter--;
+            }
+            char counter_str[16];
+            itoa(counter, counter_str, 10);
+            send_string("Aktualna wartosc licznika: ");
+            send_string(counter_str);
+            send_string("\r\n");
+            HAL_Delay(300);
+        }
+
+        // wyświetlanie wartości licznika na diodach
+        for (int i = 0; i < 9; i++)
+        {
+            if (counter & (1 << i))
+            {
+                HAL_GPIO_WritePin(GPIOC, 1 << i, GPIO_PIN_SET);
+            }
+            else
+            {
+                HAL_GPIO_WritePin(GPIOC, 1 << i, GPIO_PIN_RESET);
+            }
+        }
+
+
+        if(__HAL_UART_GET_FLAG(&uart, UART_FLAG_RXNE) == SET)
+        {
+        	char ch;
+
+        	HAL_UART_Receive(&uart, &ch, 1, 100);
+        	switch (ch)
+        	{
+        		case 'z':
+        			counter = 0;
+        		    for (int i = 0; i < 9; i++)
+        		    {
+        		    	HAL_GPIO_WritePin(GPIOC, 1 << i, GPIO_PIN_RESET);
+        		    }
+        		    send_string("Klawisz Z wcisniety - licznik wyzerowany.\r\n");
+        		    HAL_Delay(100);
+        	}
+        }
+    }
+}
