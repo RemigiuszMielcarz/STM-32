@@ -1,4 +1,4 @@
-#Zadania do wykonania:
+# Zadania do wykonania:
 
 1. W oparciu o znane operatory bitowe zrealizować podany przez prowadzącego efekt świetlny na diodach LED (diody się rozchodzą i schodzą):
 
